@@ -8,20 +8,21 @@
 <script id="vs-src" type="x-shader/x-vertex">
     attribute vec3 aVertexPosition;
     attribute vec4 aVertexColor;
-    
+    uniform mat4 uMVMatrix;
+
     varying vec4 vColor;
-    
+
     void main(void) {
-        gl_Position = vec4(aVertexPosition, 1.0);
+        gl_Position = uMVMatrix * vec4(aVertexPosition, 1.0);
         vColor = aVertexColor;
     }
 </script>
 
 <script id="fs-src" type="x-shader/x-fragment">
     precision mediump float;
-    
+
     varying vec4 vColor;
-    
+
     void main(void) {
         gl_FragColor = vColor;
     }

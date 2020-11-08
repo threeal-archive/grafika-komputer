@@ -9,6 +9,14 @@ var vertexPositionBuffer;
 
 var vertexColorBuffer;
 
+var mvMatrix = mat4.create();
+
+var rotAngle = 0;
+
+function degToRad(deg) {
+  return deg * 3.14159265359 / 180.0;
+}
+
 /* Fungsi untuk membuat WebGL Context */
 function createGLContext(canvas) {
   var names = ["webgl", "experimental-webgl"];
@@ -87,6 +95,8 @@ function setupShaders() {
 
   shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
   gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
+
+  shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
 }
 
 /* Setup buffers dengan data */
@@ -272,6 +282,12 @@ function draw() {
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexColorBuffer);
   gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, vertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
+  mat4.identity(mvMatrix);
+  mat4.rotateX(mvMatrix, mvMatrix, degToRad(rotAngle));
+  mat4.rotateY(mvMatrix, mvMatrix, degToRad(rotAngle));
+  mat4.rotateZ(mvMatrix, mvMatrix, degToRad(rotAngle));
+  gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+
   gl.drawArrays(gl.TRIANGLES, 0, vertexPositionBuffer.numberOfItems);
 }
 
@@ -283,5 +299,21 @@ function startup() {
   setupBuffers();
   gl.clearColor(0.95, 0.95, 0.95, 1.0);
   gl.enable(gl.DEPTH_TEST);
+  tick();
+}
+
+function tick() {
+  requestAnimationFrame(tick);
   draw();
+  animate();
+}
+
+function animate() {
+  var timeNow = new Date().getTime();
+  if (typeof lastTime !== "undefined") {
+    var elapsedTime = timeNow - lastTime;
+    rotAngle = (rotAngle + elapsedTime * 0.1) % 360;
+  }
+
+  lastTime = timeNow;
 }
