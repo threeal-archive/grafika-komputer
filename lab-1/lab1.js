@@ -303,7 +303,7 @@ function startup() {
 }
 
 function tick() {
-  requestAnimationFrame(tick);
+  requestAnimFrame(tick);
   draw();
   animate();
 }
