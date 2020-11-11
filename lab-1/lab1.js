@@ -261,14 +261,14 @@ function setupBuffers() {
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(triangleVertices), gl.STATIC_DRAW);
   vertexPositionBuffer.itemSize = 3;
   vertexPositionBuffer.numberOfItems = vertexPositionBuffer.itemSize
-    * (blackVertices.length + yellowVertices.length - 4);
+    * (blackVertices.length / 2 + yellowVertices.length / 2 - 4);
 
   vertexColorBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexColorBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colorsVertices), gl.STATIC_DRAW);
   vertexColorBuffer.itemSize = 4;
   vertexColorBuffer.numItems = vertexColorBuffer.itemSize
-    * (blackVertices.length + yellowVertices.length - 4);
+    * (blackVertices.length / 2 + yellowVertices.length / 2 - 4);
 }
 
 /* Fungsi Draw */
