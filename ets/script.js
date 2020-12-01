@@ -31,6 +31,178 @@ function initShaderProgram(gl, vsSource, fsSource) {
   return shaderProgram;
 }
 
+function initProgramInfo(gl) {
+  const vsSource = `
+    attribute vec4 aVertexPosition;
+
+    uniform mat4 uProjectionMatrix;
+    uniform mat4 uModelViewMatrix;
+    uniform vec4 uModelColor;
+
+    varying lowp vec4 vColor;
+
+    void main() {
+      gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+      vColor = uModelColor;
+    }
+  `;
+
+  const fsSource = `
+    varying lowp vec4 vColor;
+
+    void main() {
+      gl_FragColor = vColor;
+    }
+  `;
+
+  const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
+  if (shaderProgram == null) {
+    return null;
+  }
+
+  return {
+    program: shaderProgram,
+    attribLocations: {
+      vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
+    },
+    uniformLocations: {
+      projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
+      modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+      modelColor: gl.getUniformLocation(shaderProgram, 'uModelColor'),
+    },
+  };
+}
+
+function initPlanets(gl) {
+  const sunBuffers = initSphereBuffers(gl, 12);
+  const largeBuffers = initSphereBuffers(gl, 8);
+  const smallBuffers = initSphereBuffers(gl, 6);
+
+  const sun = {
+    parent: null,
+    buffers: sunBuffers,
+    color: [ 246, 215, 82, 255 ],
+    size: 696340.0 / 15,
+    distance: 0.0,
+    revolution: 1000000000.0,
+    rotation: 27.0,
+  };
+
+  const mercury = {
+    parent: sun,
+    buffers: smallBuffers,
+    color: [ 203, 169, 131, 255 ],
+    size: 2439.7,
+    distance: 64902000.0 / 500,
+    revolution: 87.97,
+    rotation: 58.6,
+  };
+
+  const venus = {
+    parent: sun,
+    buffers: smallBuffers,
+    color: [ 171, 109, 43, 255 ],
+    size: 6051.8,
+    distance: 107730000.0 / 500,
+    revolution: 224.7,
+    rotation: 243.0,
+  };
+
+  const earth = {
+    parent: sun,
+    buffers: smallBuffers,
+    color: [ 15, 34, 99, 255 ],
+    size: 6371.0,
+    distance: 147530000.0 / 500,
+    revolution: 365.26,
+    rotation: 0.99,
+  };
+
+  const moon = {
+    parent: earth,
+    buffers: smallBuffers,
+    color: [ 70, 86, 82, 255 ],
+    size: 1737.1,
+    distance: 384400.0 / 20,
+    revolution: 27.322,
+    rotation: 27.0,
+  };
+
+  const mars = {
+    parent: sun,
+    buffers: smallBuffers,
+    color: [ 130, 119, 78, 255 ],
+    size: 3389.5,
+    distance: 221050000 / 600,
+    revolution: 1.88 * 365.26,
+    rotation: 1.03,
+  };
+
+  const jupiter = {
+    parent: sun,
+    buffers: largeBuffers,
+    color: [ 180, 135, 90, 255 ],
+    size: 69911.0 / 2,
+    distance: 764390000.0 / 1200,
+    revolution: 11.86 * 365.26,
+    rotation: 0.41,
+  };
+
+  const saturn = {
+    parent: sun,
+    buffers: largeBuffers,
+    color: [ 242, 201, 131, 255 ],
+    size: 58232.0 / 2,
+    distance: 1492000000.0 / 1400,
+    revolution: 29.46 * 365.26,
+    rotation: 0.45,
+  };
+
+  const uranus = {
+    parent: sun,
+    buffers: largeBuffers,
+    color: [ 172, 214, 238, 255 ],
+    size: 25362.0 / 1.5,
+    distance: 2958200000.0 / 1800,
+    revolution: 84.01 * 365.26,
+    rotation: 0.72,
+  };
+
+  const neptune = {
+    parent: sun,
+    buffers: largeBuffers,
+    color: [ 112, 139, 186, 255 ],
+    size: 24622.0 / 1.5,
+    distance: 4476100000.0 / 2200,
+    revolution: 164.79 * 365.26,
+    rotation: 0.67,
+  };
+
+  const pluto = {
+    parent: sun,
+    buffers: smallBuffers,
+    color: [ 253, 253, 253, 255 ],
+    size: 6371.0,
+    distance: 5900000000.0 / 2600,
+    revolution: 248.59 * 365.26,
+    rotation: 6.39,
+  };
+
+  return [
+    sun,
+    mercury,
+    venus,
+    earth,
+    moon,
+    mars,
+    jupiter,
+    saturn,
+    uranus,
+    neptune,
+    pluto,
+  ];
+}
+
 function initSphereBuffers(gl, div) {
   var positions = [];
   for (var i = 0; i <= div; ++i) {
@@ -180,173 +352,12 @@ function main() {
     return;
   }
 
-  const vsSource = `
-    attribute vec4 aVertexPosition;
-
-    uniform mat4 uProjectionMatrix;
-    uniform mat4 uModelViewMatrix;
-    uniform vec4 uModelColor;
-
-    varying lowp vec4 vColor;
-
-    void main() {
-      gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-      vColor = uModelColor;
-    }
-  `;
-
-  const fsSource = `
-    varying lowp vec4 vColor;
-
-    void main() {
-      gl_FragColor = vColor;
-    }
-  `;
-
-  const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
-  if (shaderProgram == null) {
+  const programInfo = initProgramInfo(gl);
+  if (programInfo == null) {
     return;
   }
 
-  const programInfo = {
-    program: shaderProgram,
-    attribLocations: {
-      vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
-    },
-    uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
-      modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
-      modelColor: gl.getUniformLocation(shaderProgram, 'uModelColor'),
-    },
-  };
-
-  const sunBuffers = initSphereBuffers(gl, 12);
-  const largeBuffers = initSphereBuffers(gl, 8);
-  const smallBuffers = initSphereBuffers(gl, 6);
-
-  const sun = {
-    parent: null,
-    buffers: sunBuffers,
-    color: [ 246, 215, 82, 255 ],
-    size: 696340.0 / 15,
-    distance: 0.0,
-    revolution: 1000000000.0,
-    rotation: 27.0,
-  };
-
-  const mercury = {
-    parent: sun,
-    buffers: smallBuffers,
-    color: [ 203, 169, 131, 255 ],
-    size: 2439.7,
-    distance: 64902000.0 / 500,
-    revolution: 87.97,
-    rotation: 58.6,
-  };
-
-  const venus = {
-    parent: sun,
-    buffers: smallBuffers,
-    color: [ 171, 109, 43, 255 ],
-    size: 6051.8,
-    distance: 107730000.0 / 500,
-    revolution: 224.7,
-    rotation: 243.0,
-  };
-
-  const earth = {
-    parent: sun,
-    buffers: smallBuffers,
-    color: [ 15, 34, 99, 255 ],
-    size: 6371.0,
-    distance: 147530000.0 / 500,
-    revolution: 365.26,
-    rotation: 0.99,
-  };
-
-  const moon = {
-    parent: earth,
-    buffers: smallBuffers,
-    color: [ 70, 86, 82, 255 ],
-    size: 1737.1,
-    distance: 384400.0 / 20,
-    revolution: 27.322,
-    rotation: 27.0,
-  };
-
-  const mars = {
-    parent: sun,
-    buffers: smallBuffers,
-    color: [ 130, 119, 78, 255 ],
-    size: 3389.5,
-    distance: 221050000 / 600,
-    revolution: 1.88 * 365.26,
-    rotation: 1.03,
-  };
-
-  const jupiter = {
-    parent: sun,
-    buffers: largeBuffers,
-    color: [ 180, 135, 90, 255 ],
-    size: 69911.0 / 2,
-    distance: 764390000.0 / 1200,
-    revolution: 11.86 * 365.26,
-    rotation: 0.41,
-  };
-
-  const saturn = {
-    parent: sun,
-    buffers: largeBuffers,
-    color: [ 242, 201, 131, 255 ],
-    size: 58232.0 / 2,
-    distance: 1492000000.0 / 1400,
-    revolution: 29.46 * 365.26,
-    rotation: 0.45,
-  };
-
-  const uranus = {
-    parent: sun,
-    buffers: largeBuffers,
-    color: [ 172, 214, 238, 255 ],
-    size: 25362.0 / 1.5,
-    distance: 2958200000.0 / 1800,
-    revolution: 84.01 * 365.26,
-    rotation: 0.72,
-  };
-
-  const neptune = {
-    parent: sun,
-    buffers: largeBuffers,
-    color: [ 112, 139, 186, 255 ],
-    size: 24622.0 / 1.5,
-    distance: 4476100000.0 / 2200,
-    revolution: 164.79 * 365.26,
-    rotation: 0.67,
-  };
-
-  const pluto = {
-    parent: sun,
-    buffers: smallBuffers,
-    color: [ 253, 253, 253, 255 ],
-    size: 6371.0,
-    distance: 5900000000.0 / 2600,
-    revolution: 248.59 * 365.26,
-    rotation: 6.39,
-  };
-
-  const planets = [
-    sun,
-    mercury,
-    venus,
-    earth,
-    moon,
-    mars,
-    jupiter,
-    saturn,
-    uranus,
-    neptune,
-    pluto,
-  ];
+  const planets = initPlanets(gl);
 
   planets.forEach(planet => {
     planet.position = Math.random() * Math.PI;
@@ -356,14 +367,11 @@ function main() {
     });
   });
 
-  var speed = 1.0;
-
   var then = null;
   const render = (now) => {
     if (then) {
       now *= 0.001;
-      const deltaTime = now - then;
-      const elapsed = deltaTime * speed;
+      const elapsed = now - then;
 
       planets.forEach(planet => {
         planet.position += elapsed * Math.PI / planet.revolution;
