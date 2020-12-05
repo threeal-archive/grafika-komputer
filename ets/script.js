@@ -73,6 +73,76 @@ function initProgramInfo(gl) {
   };
 }
 
+function initCamera(gl) {
+  return {
+    fieldOfView: 45.0 * Math.PI / 180.0,
+    aspect: gl.canvas.clientWidth / gl.canvas.clientHeight,
+    zNear: 0.1,
+    zFar: 1000000000000.0,
+    rotation: 0.0,
+    distance: 1000000.0,
+    minDistance: 500000.0,
+    maxDistance: 5000000.0,
+    getProjectionMatrix: function() {
+      const projectionMatrix = mat4.create();
+      mat4.perspective(projectionMatrix, this.fieldOfView,
+          this.aspect, this.zNear, this.zFar);
+      mat4.translate(projectionMatrix, projectionMatrix, [ 0.0, 0.0, -this.distance ]);
+
+      const distanceRange = this.maxDistance - this.minDistance;
+      const tilt = 0.0 + (90.0 * (this.distance - this.minDistance) / distanceRange);
+
+      mat4.rotate(projectionMatrix, projectionMatrix,
+          tilt * Math.PI / 180.0, [ 1.0, 0.0, 0.0 ]);
+      mat4.rotate(projectionMatrix, projectionMatrix,
+          this.rotation * Math.PI / 180.0, [ 0.0, 1.0, 0.0 ]);
+
+      return projectionMatrix;
+    }
+  }
+}
+
+function initSphereBuffers(gl, div) {
+  var positions = [];
+  for (var i = 0; i <= div; ++i) {
+    var ai = i * Math.PI / div;
+    var si = Math.sin(ai);
+    var ci = Math.cos(ai);
+    for (var j = 0; j <= div; ++j) {
+      var aj = j * 2 * Math.PI / div;
+      var sj = Math.sin(aj);
+      var cj = Math.cos(aj);
+      positions = positions.concat([ si * sj, ci, si * cj ]);
+    }
+  }
+
+  const positionBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+  var indices = []
+  for (var i = 0; i < div; ++i) {
+    for (var j = 0; j < div; ++j) {
+      var p1 = i * (div + 1) + j;
+      var p2 = p1 + (div + 1);
+      indices = indices.concat([
+        p1, p2, p1 + 1,
+        p1 + 1, p2, p2 + 1,
+      ]);
+    }
+  }
+
+  const indexBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+  return {
+    position: positionBuffer,
+    indices: indexBuffer,
+    count: indices.length,
+  };
+}
+
 function initPlanets(gl) {
   const sunBuffers = initSphereBuffers(gl, 12);
   const largeBuffers = initSphereBuffers(gl, 8);
@@ -203,47 +273,6 @@ function initPlanets(gl) {
   ];
 }
 
-function initSphereBuffers(gl, div) {
-  var positions = [];
-  for (var i = 0; i <= div; ++i) {
-    var ai = i * Math.PI / div;
-    var si = Math.sin(ai);
-    var ci = Math.cos(ai);
-    for (var j = 0; j <= div; ++j) {
-      var aj = j * 2 * Math.PI / div;
-      var sj = Math.sin(aj);
-      var cj = Math.cos(aj);
-      positions = positions.concat([ si * sj, ci, si * cj ]);
-    }
-  }
-
-  const positionBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-
-  var indices = []
-  for (var i = 0; i < div; ++i) {
-    for (var j = 0; j < div; ++j) {
-      var p1 = i * (div + 1) + j;
-      var p2 = p1 + (div + 1);
-      indices = indices.concat([
-        p1, p2, p1 + 1,
-        p1 + 1, p2, p2 + 1,
-      ]);
-    }
-  }
-
-  const indexBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-
-  return {
-    position: positionBuffer,
-    indices: indexBuffer,
-    count: indices.length,
-  };
-}
-
 function drawModel(gl, programInfo, buffers, projectionMatrix,
     modelViewMatrix, modelColor) {
   gl.useProgram(programInfo.program);
@@ -296,7 +325,7 @@ function drawModel(gl, programInfo, buffers, projectionMatrix,
   }
 }
 
-function drawScene(gl, programInfo, planets) {
+function drawScene(gl, programInfo, camera, planets) {
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
   gl.clearDepth(1.0);
   gl.enable(gl.DEPTH_TEST);
@@ -304,15 +333,7 @@ function drawScene(gl, programInfo, planets) {
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  const projectionMatrix = mat4.create();
-  const fieldOfView = 45 * Math.PI / 180;
-  const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-  const zNear = 0.1;
-  const zFar = 1000000000000.0;
-
-  mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
-  mat4.translate(projectionMatrix, projectionMatrix, [ -0.0, 0.0, -600000.0 ]);
-  mat4.rotate(projectionMatrix, projectionMatrix, 20 * Math.PI / 180, [ 1.0, 0.0, 0.0 ]);
+  const projectionMatrix = camera.getProjectionMatrix();
 
   const getModelViewMatrix = (planet) => {
     const modelViewMatrix = mat4.create();
@@ -357,6 +378,8 @@ function main() {
     return;
   }
 
+  const camera = initCamera(gl);
+
   const planets = initPlanets(gl);
 
   planets.forEach(planet => {
@@ -367,21 +390,81 @@ function main() {
     });
   });
 
+  var spacePressed = false;
+  var leftPressed = false;
+  var upPressed = false;
+  var rightPressed = false;
+  var downPressed = false;
+
+  window.onkeydown = (e) => {
+    switch (e.keyCode) {
+      case 32: spacePressed = true; break;
+      case 37: leftPressed = true; break;
+      case 38: upPressed = true; break;
+      case 39: rightPressed = true; break;
+      case 40: downPressed = true; break;
+    }
+  }
+
+  window.onkeyup = (e) => {
+    switch (e.keyCode) {
+      case 32: spacePressed = false; break;
+      case 37: leftPressed = false; break;
+      case 38: upPressed = false; break;
+      case 39: rightPressed = false; break;
+      case 40: downPressed = false; break;
+    }
+  }
+
+  var speed = 1.0;
   var then = null;
   const render = (now) => {
+    now *= 0.001;
+
     if (then) {
-      now *= 0.001;
-      const elapsed = now - then;
+      var elapsed = now - then;
+      if (spacePressed) {
+        speed += 50.0 * elapsed;
+        if (speed >= 50.0) {
+          speed = 50.0;
+        }
+      } else {
+        speed -= 100.0 * elapsed;
+        if (speed <= 1.0) {
+          speed = 1.0;
+        }
+      }
+
+      elapsed *= speed;
 
       planets.forEach(planet => {
         planet.position += elapsed * Math.PI / planet.revolution;
         planet.angle += elapsed * Math.PI / planet.rotation;
       });
+
+      if (leftPressed) {
+        camera.rotation += 100.0 * elapsed;
+      }
+      if (rightPressed) {
+        camera.rotation -= 100.0 * elapsed;
+      }
+      if (upPressed) {
+        camera.distance -= 2000000.0 * elapsed;
+        if (camera.distance < camera.minDistance) {
+          camera.distance = camera.minDistance;
+        }
+      }
+      if (downPressed) {
+        camera.distance += 2000000.0 * elapsed;
+        if (camera.distance > camera.maxDistance) {
+          camera.distance = camera.maxDistance;
+        }
+      }
     }
 
     then = now;
 
-    drawScene(gl, programInfo, planets);
+    drawScene(gl, programInfo, camera, planets);
 
     requestAnimationFrame(render);
   }
