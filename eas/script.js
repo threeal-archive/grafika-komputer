@@ -53,17 +53,18 @@ function initProgramInfo(gl) {
     varying lowp vec4 vColor;
 
     void main() {
-      vec4 vertexPositionEye = uModelViewMatrix * aVertexPosition;
+      vec4 vertexPositionEye4 = uModelViewMatrix * aVertexPosition;
+      vec3 vertexPositionEye3 = vertexPositionEye4.xyz / vertexPositionEye4.w;
 
-      gl_Position = uProjectionMatrix * vertexPositionEye;
+      gl_Position = uProjectionMatrix * vertexPositionEye4;
 
-      vec4 vertexNormalEye = normalize(uNormalMatrix * aVertexNormal);
-      vec4 vectorToLightSource = normalize(uLightPosition - vertexPositionEye);
+      vec3 vertexNormalEye = normalize((uNormalMatrix * aVertexNormal).xyz);
+      vec3 vectorToLightSource = normalize(uLightPosition.xyz - vertexPositionEye3);
 
       float diffuseWeightning = max(dot(vertexNormalEye, vectorToLightSource), 0.0);
 
-      vec4 reflectionVector = normalize(reflect(-vectorToLightSource, vertexNormalEye));
-      vec4 viewVectorEye = -normalize(vertexPositionEye);
+      vec3 reflectionVector = normalize(reflect(-vectorToLightSource, vertexNormalEye));
+      vec3 viewVectorEye = -normalize(vertexPositionEye3);
 
       float reflectionView = max(dot(reflectionVector, viewVectorEye), 0.0);
       float specularWeightning = pow(reflectionView, uModelShininess);
@@ -303,10 +304,10 @@ function initCapsuleBuffer(gl, div, width, height) {
 
 function initModels(gl) {
   const capsuleModel = {
-    buffers: initCapsuleBuffer(gl, 16, 1.0, 2.0),
+    buffers: initCapsuleBuffer(gl, 32, 1.0, 2.0),
     rotation: { x: 0.0, y: 0.0, z: 0.0, },
     material: {
-      ambient: [ 1.0, 0.2, 0.2, 1.0 ],
+      ambient: [ 1.0, 0.4, 0.0, 1.0 ],
       diffuse: [ 1.0, 0.8, 0.0, 1.0 ],
       specular: [ 1.0, 1.0, 1.0, 1.0 ],
       shininess: 100.0,
@@ -357,9 +358,9 @@ function drawModel(gl, programInfo, model) {
   gl.enableVertexAttribArray(programInfo.attribLocations.vertexNormal);
 
   gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix,
-    false, model.getModelViewMatrix());
+      false, model.getModelViewMatrix());
   gl.uniformMatrix4fv(programInfo.uniformLocations.normalMatrix,
-    false, model.getNormalMatrix());
+      false, model.getNormalMatrix());
 
   gl.uniform4fv(programInfo.uniformLocations.modelAmbient, model.material.ambient);
   gl.uniform4fv(programInfo.uniformLocations.modelDiffuse, model.material.diffuse);
