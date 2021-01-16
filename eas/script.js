@@ -150,21 +150,50 @@ function initLight() {
   };
 }
 
-function initSphereBuffers(gl, div, width, height) {
+function initCapsuleBuffer(gl, div, width, height) {
   div = (div > 2) ? div : 2;
-  width = width;
+  width = width || 1.0;
   height = height || 1.0;
 
+  if (height < width + 0.1) {
+    height = width + 0.1;
+  }
+
   let positions = [];
-  for (let i = 0; i <= div; ++i) {
+  for (let i = 0; i <= div + 1 + (div % 2); ++i) {
     if (i == 0) {
       positions = positions.concat([ 0, height, 0 ]);
-    } else if (i == div) {
+    } else if (i == div + 1 + (div % 2)) {
       positions = positions.concat([ 0, -height, 0 ]);
     } else {
-      const ai = i * Math.PI / div;
+      let ai;
+      if (div % 2 == 0) {
+        if (i == (div + 2) / 2) {
+          ai = Math.PI / 2;
+        } else if (i < (div + 2) / 2) {
+          ai = i * Math.PI / div;
+        } else {
+          ai = (i - 1) * Math.PI / div;
+        }
+      } else {
+        if (i == (div + 1) / 2 || i == (div + 3) / 2) {
+          ai = Math.PI / 2;
+        } else if (i < (div + 1) / 2) {
+          ai = i * Math.PI / div;
+        } else {
+          ai = (i - 2) * Math.PI / div;
+        }
+      }
+
       const si = Math.sin(ai) * width;
-      const ci = Math.cos(ai) * height;
+
+      let ci = Math.cos(ai) * width;
+      if (i < (div + 1 + (div % 2)) / 2) {
+        ci += (height - width);
+      } else {
+        ci -= (height - width);
+      }
+
       for (let j = 0; j < div * 2; ++j) {
         const aj = j * Math.PI / div;
         const sj = Math.sin(aj) * width;
@@ -180,7 +209,7 @@ function initSphereBuffers(gl, div, width, height) {
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
   let indices = []
-  for (let i = 0; i < div; ++i) {
+  for (let i = 0; i < div + 1 + (div % 2); ++i) {
     if (i == 0) {
       const a = 0;
       for (let j = 0; j < div * 2; ++j) {
@@ -188,7 +217,7 @@ function initSphereBuffers(gl, div, width, height) {
         const c = 1 + (j + 1) % (div * 2);
         indices = indices.concat([ a, b, c ]);
       }
-    } else if (i == div - 1) {
+    } else if (i == div + (div % 2)) {
       const a = 1 + (i * div * 2);
       for (let j = 0; j < div * 2; ++j) {
         const b = 1 + ((i - 1) * div * 2) + j;
@@ -273,8 +302,8 @@ function initSphereBuffers(gl, div, width, height) {
 }
 
 function initModels(gl) {
-  const sphereModel = {
-    buffers: initSphereBuffers(gl, 32, 1.5, 0.5),
+  const capsuleModel = {
+    buffers: initCapsuleBuffer(gl, 16, 1.0, 2.0),
     rotation: { x: 0.0, y: 0.0, z: 0.0, },
     material: {
       ambient: [ 1.0, 0.2, 0.2, 1.0 ],
@@ -285,7 +314,7 @@ function initModels(gl) {
   };
 
   const models = [
-    sphereModel,
+    capsuleModel,
   ]
 
   models.forEach(model => {
@@ -424,7 +453,7 @@ function main() {
         models.forEach(model => {
           model.rotation.x += elapsed * 100.0;
           model.rotation.y += elapsed * 50.0;
-          model.rotation.z += elapsed * 100.0;
+          model.rotation.z += elapsed * 50.0;
         });
       }
     }
